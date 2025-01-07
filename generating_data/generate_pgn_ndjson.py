@@ -53,6 +53,7 @@ def fetch_bullet_games(username, max_games, headers):
                 if line:
                     try:
                         game = line.decode("utf-8")
+                        data = json.loads(game)
                         batch_games.append(game)
                         if len(batch_games) % 500 == 0:
                             print(f"Fetched {len(batch_games)} games for user {username}.")
@@ -93,15 +94,15 @@ def main():
 
     top_bullet_players_list = [
         'wizard98',
-        'nihalsarin2004',
-        'mishka_the_great',
-        'ediz_gurel',
-        'rebeccaharris',
-        'meneermandje',
-        'night-king96',
-        'muisback',
-        'vincentkeymer2004',
-        'zhigalko_sergei'
+        # 'nihalsarin2004',
+        # 'mishka_the_great',
+        # 'ediz_gurel',
+        # 'rebeccaharris',
+        # 'meneermandje',
+        # 'night-king96',
+        # 'muisback',
+        # 'vincentkeymer2004',
+        # 'zhigalko_sergei'
     ]
 
     max_GM_games = 2000

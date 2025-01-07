@@ -62,6 +62,17 @@ def flip_black_square(square):
 
 #-----------------------------------------------------------------------
 
+def extract_piece_type(move):
+    # Check for castling moves first
+    if move in ['O-O', 'O-O-O']:
+        return 'K'
+    elif move.startswith(('K', 'Q', 'R', 'B', 'N')):
+        return move[0]
+    else:
+        return 'P'
+    
+#-----------------------------------------------------------------------
+
 def flip_black_fen(fen):
     '''
     Split the FEN string into its components.
@@ -365,12 +376,12 @@ def generate_moves_pkl(input_file, output_pkl, list_of_players):
 
     print("\nProcessed all moves. Total moves before filtering: ", len(moves_df))
 
-    # get only the moves of the top bullet players
+    # Get only the moves of the top bullet players
     top_moves_df = moves_df[moves_df['moving_player'].isin(list_of_players)]
     print("Total moves after filtering: ", len(top_moves_df))
     print()
 
-    # lastly, we need to flip the board for the black player to normalize the data
+    # We need to flip the board for the black player to normalize the data
     def flip(row):
         if row['player_color'] == 'black':
             row['before_fen'] = flip_black_fen(row['before_fen'])
@@ -378,6 +389,13 @@ def generate_moves_pkl(input_file, output_pkl, list_of_players):
         return row
     
     top_moves_df = top_moves_df.apply(flip, axis=1)
+
+    # We also need to add the piece type column as this is our labeled data
+    def get_piece_type(row):
+        row['piece_type'] = extract_piece_type(row['move'])
+        return row
+    
+    top_moves_df = top_moves_df.apply(get_piece_type, axis=1)
 
     # save the moves dataframe to a pickle file
     top_moves_df.to_pickle(output_pkl)
@@ -403,16 +421,16 @@ def generate_blunders_pkl(input_pkl, output_pkl):
 def main():
     # list of top bullet players on lichess whose games we will be analyzing
     top_bullet_players_list = [
-        # 'wizard98',
-        # 'nihalsarin2004',
+        'wizard98',
+        'nihalsarin2004',
         'mishka_the_great',
-        # 'ediz_gurel',
-        # 'rebeccaharris',
-        # 'meneermandje',
-        # 'night-king96',
-        # 'muisback',
-        # 'vincentkeymer2004',
-        # 'zhigalko_sergei'
+        'ediz_gurel',
+        'rebeccaharris',
+        'meneermandje',
+        'night-king96',
+        'muisback',
+        'vincentkeymer2004',
+        'zhigalko_sergei'
     ]
 
     for player in top_bullet_players_list:
@@ -436,25 +454,25 @@ def main():
         print(f"Length of {player} blunders dataframe: {len(blunders_df)}\n")
 
 
-    # # gets the data for Tang specifically
-    # Tang_list = ['penguingm1', 'penguingim1']
+    # gets the data for Tang specifically
+    Tang_list = ['penguingm1', 'penguingim1']
 
-    # file_name = 'data/ndjson/Tang_games.ndjson'
-    # games_pkl = 'data/pkl/games/Tang_games.pkl'
-    # moves_pkl = 'data/pkl/moves/Tang_moves.pkl'
-    # blunders_pkl = 'data/pkl/blunders/Tang_blunders.pkl'
+    file_name = 'data/ndjson/Tang_games.ndjson'
+    games_pkl = 'data/pkl/games/Tang_games.pkl'
+    moves_pkl = 'data/pkl/moves/Tang_moves.pkl'
+    blunders_pkl = 'data/pkl/blunders/Tang_blunders.pkl'
 
-    # print("Generating games dataframe for Tang...")
-    # Tang_games_df = generate_games_pkl(input_file=file_name, output_pkl=games_pkl, list_of_players=Tang_list)
-    # print(f"Length of Tang games dataframe: {len(Tang_games_df)}\n")
+    print("Generating games dataframe for Tang...")
+    Tang_games_df = generate_games_pkl(input_file=file_name, output_pkl=games_pkl, list_of_players=Tang_list)
+    print(f"Length of Tang games dataframe: {len(Tang_games_df)}\n")
 
-    # print("Generating moves dataframe for Tang...")
-    # Tang_moves_df = generate_moves_pkl(games_pkl, output_pkl=moves_pkl, list_of_players=Tang_list)
-    # print(f"Length of Tang moves dataframe: {len(Tang_moves_df)}\n")
+    print("Generating moves dataframe for Tang...")
+    Tang_moves_df = generate_moves_pkl(games_pkl, output_pkl=moves_pkl, list_of_players=Tang_list)
+    print(f"Length of Tang moves dataframe: {len(Tang_moves_df)}\n")
 
-    # print("Generating blunders dataframe for Tang...")
-    # Tang_blunders_df = generate_blunders_pkl(moves_pkl, output_pkl=blunders_pkl)
-    # print(f"Length of Tang blunders dataframe: {len(Tang_blunders_df)}\n")
+    print("Generating blunders dataframe for Tang...")
+    Tang_blunders_df = generate_blunders_pkl(moves_pkl, output_pkl=blunders_pkl)
+    print(f"Length of Tang blunders dataframe: {len(Tang_blunders_df)}\n")
 
 #-----------------------------------------------------------------------
 if __name__ == '__main__':
