@@ -20,67 +20,86 @@ from models.CNNs import flexCNN
 from models.multiClassTrainer import multiTrainer
 from generating_data.generate_loaders import create_Tang_multi_loaders
 
+def train_model(conv_layers, aff_layers, kernel_sizes, optim_name, Tang_train_loader, Tang_val_loader, momentum, num_epochs, dropout, reg, learning_rate, save_path, results):
+    """Train a single model and store results using multiprocessing"""
+    print(f"\nTraining Model: {conv_layers} Conv Layers, {aff_layers} Aff Layers, {optim_name}")
+
+    # Initialize model and trainer
+    model = flexCNN(conv_layers=conv_layers, aff_layers=aff_layers, kernel_sizes=kernel_sizes)
+    trainer = multiTrainer(net=model, train_loader=Tang_train_loader, val_loader=Tang_val_loader)
+
+    # Train model
+    completed_model, best_model, train_losses, val_losses, train_acc, val_acc = trainer.train(
+        optim_name=optim_name,
+        num_epochs=num_epochs,
+        dropout=dropout,
+        reg=reg,
+        momentum=momentum,
+        learning_rate=learning_rate,
+        verbose=True
+    )
+
+    # Save model and results
+    model_name = f"{conv_layers}conv_{aff_layers}aff_{optim_name}.pt"
+    save_model_path = os.path.join(save_path, model_name)
+    torch.save(best_model.state_dict(), save_model_path)
+
+    # Store results in shared dictionary
+    results.append({
+        'conv_layers': conv_layers,
+        'aff_layers': aff_layers,
+        'kernel_sizes': kernel_sizes,
+        'optimizer': optim_name,
+        'val_acc': val_acc[-1],
+        'model_path': save_model_path
+    })
+
+    print(f"Model saved at {save_model_path} with Validation Accuracy: {val_acc[-1]:.4f}")
+
 #-----------------------------------------------------------------------
 
 def main():
     Tang_train_loader, Tang_val_loader, Tang_test_loader = create_Tang_multi_loaders('data/pkl/moves/Tang_moves.pkl')
 
+    # Fixed hyperparameters
     momentum = 0.99
     num_epochs = 30
     dropout = 1.0
     reg = 0.0
     learning_rate = 0.005
     save_path = "savedModels/gridSearch"
+    os.makedirs(save_path, exist_ok=True)
 
+    # Varied hyperarameters
     conv_list = [1, 2, 3]
     aff_list = [1, 2, 3]
     kernel_list = [[3], [3,3], [3,3,3]]
     optim_list = ['adamw', 'sgd', 'nesterov']
 
-    results = []
+    # Use multiprocess manager
+    manager = Manager()
+    results = manager.list()
+    processes = []
 
+    # ✅ Launch parallel training for each combination
     for conv_layers, kernel_sizes in zip(conv_list, kernel_list):
         for aff_layers in aff_list:
             for optim_name in optim_list:
-                print(f"\nTraining Model: {conv_layers} Conv Layers, {aff_layers} Aff Layers, {optim_name}")
+                p = Process(target=train_model, args=(
+                    conv_layers, aff_layers, kernel_sizes, optim_name,
+                    Tang_train_loader, Tang_val_loader,
+                    momentum, num_epochs, dropout, reg, learning_rate, save_path, results
+                ))
+                p.start()
+                processes.append(p)
 
-                # Initialize model and trainer
-                model = flexCNN(conv_layers=conv_layers, aff_layers=aff_layers, kernel_sizes=kernel_sizes)
-                trainer = multiTrainer(net=model, train_loader=Tang_train_loader, val_loader=Tang_val_loader)
+    for p in processes:
+        p.join()
 
-                # Train model
-                completed_model, best_model, train_losses, val_losses, train_acc, val_acc = trainer.train(
-                    optim_name=optim_name,
-                    num_epochs=num_epochs,
-                    dropout=dropout,
-                    reg=reg,
-                    momentum=momentum,
-                    learning_rate=learning_rate,
-                    verbose=True
-                )
-
-                # Save model and results
-                model_name = f"{conv_layers}conv_{aff_layers}aff_{optim_name}.pt"
-                save_model_path = os.path.join(save_path, model_name)
-                torch.save(best_model.state_dict(), save_model_path)
-
-                # Store results in the list
-                results.append({
-                    'conv_layers': conv_layers,
-                    'aff_layers': aff_layers,
-                    'kernel_sizes': kernel_sizes,
-                    'optimizer': optim_name,
-                    'val_acc': val_acc[-1],
-                    'model_path': save_model_path
-                })
-
-                print(f"Model saved at {save_model_path} with Validation Accuracy: {val_acc[-1]:.4f}")
-
-    # Save results summary as a CSV file
-    results_df = pd.DataFrame(results)
-    results_df.to_excel("data/xlsx/model_summary.xlsx", index=False)
-
-    print("\nAll models trained and saved successfully!")
+    # Save results summary
+    results_df = pd.DataFrame(list(results))
+    results_df.to_excel("data/xlsx/model_summary_parallel.xlsx", index=False)
+    print("\nAll models trained and saved successfully.")
 
 #-----------------------------------------------------------------------
 

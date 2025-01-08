@@ -32,7 +32,6 @@ piece_to_label = {
 }
 
 #-----------------------------------------------------------------------
-#-----------------------------------------------------------------------
 '''
 Converts a FEN string to a 384 length 1 dimensional tensor that 
 represents the board state.

@@ -42,7 +42,6 @@ class CNN_2convlayer_1afflayer(nn.Module):
         return x
 
 #-----------------------------------------------------------------------
-
 '''
 A flexible CNN class that allows you to specify the number of convolutional,
 layers, affine layers, and the kernel sizes.
@@ -52,6 +51,7 @@ Input:
 - aff_layers: number of affine layers
 - kernel_sizes: list of kernel sizes for each convolutional layer
 '''
+
 class flexCNN(nn.Module):
     def __init__(self, conv_layers=1, aff_layers=1, kernel_sizes=None):
 
