@@ -32,6 +32,52 @@ piece_to_label = {
 }
 
 #-----------------------------------------------------------------------
+#-----------------------------------------------------------------------
+'''
+Converts a FEN string to a 384 length 1 dimensional tensor that 
+represents the board state.
+
+Input: FEN string
+Output: 6x8x8 tensor
+'''
+
+def fen_to_384tensor(fen):
+    fen_items = fen.split()
+    board = fen_items[0]
+    rows = board.split('/')
+    tensor_384 = torch.zeros(384)
+
+    piece_to_channel = {
+        'P': (0, 1),  
+        'p': (0, -1), 
+        'N': (1, 1),  
+        'n': (1, -1),
+        'B': (2, 1),  
+        'b': (2, -1),
+        'R': (3, 1),  
+        'r': (3, -1),
+        'Q': (4, 1),  
+        'q': (4, -1),
+        'K': (5, 1),  
+        'k': (5, -1)
+    }
+
+    for i, row in enumerate(rows):
+        if row == '8':
+            continue
+        col_idx = 0
+        for char in row:
+            if char.isdigit():
+                col_idx += int(char) # skip the empty squares
+            else:
+                piece = char
+                skip, value = piece_to_channel[piece]
+                tensor_384[64*skip + 8*i + col_idx] = value
+    
+    return tensor_384
+
+
+#-----------------------------------------------------------------------
 '''
 Converts a FEN string to a 6x8x8 tensor that represents the board state.
 
