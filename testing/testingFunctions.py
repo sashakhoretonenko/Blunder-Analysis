@@ -4,7 +4,7 @@ from sklearn.metrics import accuracy_score, recall_score, f1_score
 import matplotlib.pyplot as plt
 import pandas as pd
 #-----------------------------------------------------------------------
-def evaluate_per_piece_accuracy(model, test_loader, device):
+def evaluate_per_piece_accuracy(model, test_loader, player, device):
     model.eval() 
     class_correct = [0] * 6
     class_total = [0] * 6
@@ -12,6 +12,8 @@ def evaluate_per_piece_accuracy(model, test_loader, device):
     all_predictions = []
 
     classes = ['P', 'N', 'B', 'R', 'Q', 'K']
+
+
 
     with torch.no_grad():
         for data in tqdm.tqdm(test_loader):
@@ -57,7 +59,15 @@ def evaluate_per_piece_accuracy(model, test_loader, device):
             recalls.append(0)
             f1_scores.append(0)
 
-    # ✅ Plotting the results
+    # Save this as an excel file
+    df = pd.DataFrame({
+        'Piece Type': classes,
+        'Correct Predictions': correct_counts,
+        'Incorrect Predictions': incorrect_counts
+    })
+
+    df.to_excel(f'{player}_per_piece_accuracy.xlsx', index=False)
+
     plt.figure(figsize=(10, 6))
     bar_width = 0.35
     index = range(len(classes))
@@ -79,18 +89,16 @@ def evaluate_per_piece_accuracy(model, test_loader, device):
         'F1 Score (%)': f1_scores
     })
 
-    # ✅ Calculate weighted metrics
-    weighted_accuracy = accuracy_score(all_labels, all_preds) * 100
-    weighted_recall = recall_score(all_labels, all_preds, average='weighted') * 100
-    weighted_f1 = f1_score(all_labels, all_preds, average='weighted') * 100
-
-    # ✅ Add weighted metrics to the DataFrame
+    # Calculate weighted metrics
+    weighted_accuracy = accuracy_score(all_labels, all_predictions) * 100
+    weighted_recall = recall_score(all_labels, all_predictions, average='weighted') * 100
+    weighted_f1 = f1_score(all_labels, all_predictions, average='weighted') * 100
     df.loc['Weighted'] = ['Weighted', weighted_accuracy, weighted_recall, weighted_f1]
 
     print("\nOverall Accuracy Metrics:")
     print(df)
 
-    return df
+    # Save df to excel
+    df.to_excel(f'{player}_overall_accuracy_metrics.xlsx', index=False)
 
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-df_metrics = evaluate_per_piece_accuracy(best_model, Tang_test_loader, device)
+    return df

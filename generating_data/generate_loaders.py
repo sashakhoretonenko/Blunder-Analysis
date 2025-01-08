@@ -79,7 +79,8 @@ def fen_to_tensor(fen):
 #-----------------------------------------------------------------------
 
 '''
-Converts a row of a dataframe to a dataset that we can test the CNN on.
+Converts a dataframe into 6x8x8 tensors that
+represent the board states.
 
 Input: dataframe
 Output: multiDataset object
@@ -104,11 +105,80 @@ class multiDataset(Dataset):
         return tensor, label_tensor
     
 #-----------------------------------------------------------------------
-
 '''
-Creates train, validation, and test loaders for the multi-class classification problem. 
-This function is only used for Tang's data, as the data of the other grandmasters is only
-test data.
+Converts a dataframe into a length 384 tensor that represents the board state.
+
+Input: dataframe
+Output: MLPDataset object
+'''
+
+class MLPDataset(Dataset):
+    def __init__(self, dataframe, transform=None):
+        self.dataframe = dataframe
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataframe)
+        
+    def __getitem__(self, idx):
+        before_fen = self.dataframe.iloc[idx]['before_fen']
+        tensor = fen_to_384tensor(before_fen)
+        piece_type = self.dataframe.iloc[idx]['piece_type']
+        label = piece_to_label[piece_type]
+        label_tensor = torch.tensor(label, dtype=torch.long) 
+        if self.transform:
+            tensor = self.transform(tensor)
+        return tensor, label_tensor
+    
+#-----------------------------------------------------------------------
+'''
+Creates train, validation, and test loaders for using the MLP model.
+This function is only used for Tang's data, as the data of the other
+grandmasters is only test data.
+
+Input: pkl file of Tang's moves
+Output: train, validation, and test loaders
+'''
+
+def create_Tang_MLP_loaders(pkl_file, batch_size=256):
+    Tang_df = pd.read_pickle(pkl_file)
+
+    # We use random_state=397 to ensure reproducibility and because we love COS 397!!
+
+    # Train on 70% of the data
+    train_df, test_and_val_df = train_test_split(Tang_df, test_size=0.3, random_state=397)
+    # Validate and test on 15% of the data each
+    test_df, val_df = train_test_split(test_and_val_df, test_size=0.5, random_state=397)
+
+    train_dataset = MLPDataset(train_df)
+    test_dataset = MLPDataset(test_df)
+    val_dataset = MLPDataset(val_df)
+
+    # create loaders
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+
+    return train_loader, val_loader, test_loader
+#-----------------------------------------------------------------------
+'''
+Creates just a test loader out of the GM data
+
+Input: pkl file of GM moves
+Output: test loader
+'''
+
+def create_GM_MLP_loader(pkl_file, batch_size=256):
+    GM_df = pd.read_pickle(pkl_file)
+    test_dataset = MLPDataset(GM_df)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    return test_loader
+#-----------------------------------------------------------------------
+'''
+Creates train, validation, and test loaders for using the CNN model.
+We note that multiDataset should be renamed to MLPDataset, but we
+are going to have to clean that up later. This function is only used
+for Tang's data, as the data of the other grandmasters is only test data.
 
 Input: pkl file of Tang's moves
 Output: train, validation, and test loaders
@@ -138,6 +208,9 @@ def create_Tang_multi_loaders(pkl_file, batch_size=256):
 #-----------------------------------------------------------------------
 '''
 Creates just a test loader out of the GM data
+
+Input: pkl file of GM moves
+Output: test loader
 '''
 
 def create_GM_test_multi_loaders(pkl_file, batch_size=256):
