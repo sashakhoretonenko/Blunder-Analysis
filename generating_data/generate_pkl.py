@@ -345,6 +345,8 @@ def generate_games_pkl(input_file, output_pkl, list_of_players):
 
     print("Total games before filtering: ", len(games_df))
 
+    # Because of the way that we modified our testing, this is actually unecessary
+
     # remove duplicate game_ids just in case
     games_df = games_df.drop_duplicates(subset='game_id', keep='first')
     print("Total games after filtering: ", len(games_df))
