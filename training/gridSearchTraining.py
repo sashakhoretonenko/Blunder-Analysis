@@ -67,7 +67,7 @@ def main():
     dropout = 1.0
     reg = 0.0
     learning_rate = 0.005
-    save_path = "savedModels/gridSearch"
+    save_path = "savedModels/CNNgridSearch"
     os.makedirs(save_path, exist_ok=True)
 
     # Varied hyperarameters
@@ -81,7 +81,6 @@ def main():
     results = manager.list()
     processes = []
 
-    # ✅ Launch parallel training for each combination
     for conv_layers, kernel_sizes in zip(conv_list, kernel_list):
         for aff_layers in aff_list:
             for optim_name in optim_list:

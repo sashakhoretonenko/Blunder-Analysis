@@ -1,6 +1,18 @@
 '''
 This file contains the trainer that we use both for the CNN and MLP models.
 '''
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import tqdm
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from models.CNNs import flexCNN
+from models.MLPs import flexMLP
 #-----------------------------------------------------------------------
 '''
 Function that compares whether two models have the same exact parameters.
@@ -18,17 +30,6 @@ def compare_models(model1, model2):
                for param1, param2 in zip(model1.state_dict().values(), model2.state_dict().values()))
 
 #-----------------------------------------------------------------------
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-import tqdm
-
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from models.CNNs import flexCNN
 
 class multiTrainer():
     def __init__(self, net=None, train_loader=None, val_loader=None):
@@ -118,15 +119,13 @@ class multiTrainer():
                     outputs = self.net(X)
                     # Compute loss
                     loss = loss_function(outputs, y)
-                    outputs = self.net(X)
-                    loss = loss_function(outputs, y)
                     epoch_val_loss += loss.item()
 
                     _, predicted = torch.max(outputs, 1)
                     correct_val += (predicted == y).sum().item()
                     total_val += y.size(0)
 
-            # Compute average validatoin loss
+            # Compute average validation loss
             avg_val_loss = epoch_val_loss / len(self.val_loader)
             val_acc = correct_val / total_val
             val_losses.append(avg_val_loss)
@@ -134,13 +133,21 @@ class multiTrainer():
 
             # Save best validation model
             if val_acc > self.best_val_acc:
-                self.best_val_acc = val_acc
-                self.best_model_state = self.net.state_dict()  # Save only the state_dict
-                self.best_model_config = {                     # Save the model architecture separately
-                    'conv_layers': len(self.net.conv_layers),
-                    'aff_layers': len(self.net.aff_layers),
-                    'kernel_sizes': [layer.kernel_size[0] for layer in self.net.conv_layers]
-                }
+                if isinstance(self.net, flexCNN):
+                    self.best_val_acc = val_acc
+                    self.best_model_state = self.net.state_dict() 
+                    self.best_model_config = {
+                        'conv_layers': len(self.net.conv_layers),
+                        'aff_layers': len(self.net.aff_layers),
+                        'kernel_sizes': [layer.kernel_size[0] for layer in self.net.conv_layers]
+                    }
+                elif isinstance(self.net, flexMLP):
+                    self.best_val_acc = val_acc
+                    self.best_model_state = self.net.state_dict()
+                    self.best_model_config = {
+                        'hidden_sizes': self.net.hidden_sizes,
+                        'num_affine_layers': self.net.num_affine_layers
+                    }
             print(f"New best model saved at epoch {epoch + 1}")
 
             # Learning rate decay
@@ -151,12 +158,23 @@ class multiTrainer():
 
         # Return both final model and best performing model
         completed_model = self.net
-        # Ensure the model is reconstructed with the same architecture before loading weights
-        best_model = flexCNN(
-            conv_layers=self.best_model_config['conv_layers'],
-            aff_layers=self.best_model_config['aff_layers'],
-            kernel_sizes=self.best_model_config['kernel_sizes'])
-        best_model.load_state_dict(self.best_model_state)
+        
+        # Make sure that we load the right model depending on the type
+
+        if isinstance(self.net, flexCNN):
+            best_model = flexCNN(
+                conv_layers=self.best_model_config['conv_layers'],
+                aff_layers=self.best_model_config['aff_layers'],
+                kernel_sizes=self.best_model_config['kernel_sizes'])
+            best_model.load_state_dict(self.best_model_state)
+        elif isinstance(self.net, flexMLP):
+            best_model = flexMLP(
+                hidden_sizes=self.net.hidden_sizes,
+                num_affine_layers=self.net.num_affine_layers)
+            best_model.load_state_dict(self.best_model_state)
+        else:
+            best_model = self.net
+
 
         print(f"\nTraining completed! Best Validation Accuracy: {self.best_val_acc:.4f}")
 
