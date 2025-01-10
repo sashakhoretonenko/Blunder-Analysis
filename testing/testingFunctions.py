@@ -78,7 +78,7 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
             normalized_brier_scores.append(normalized_brier)
             cross_entropies.append(cross_entropy)
 
-            print(f"{classes[i]}: Accuracy: {accuracy:.4f} | Brier Score: {brier:.4f} | Cross-Entropy Loss: {cross_entropy:.4f}")
+            print(f"{classes[i]}: Accuracy: {accuracy:.4f} | Normalized Brier Score: {normalized_brier:.4f} | Cross-Entropy Loss: {cross_entropy:.4f}")
 
         else:
             print(f"{classes[i]}: No samples available.")

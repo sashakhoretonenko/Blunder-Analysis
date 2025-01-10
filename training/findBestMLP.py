@@ -50,7 +50,6 @@ def train_model(aff_layers, hidden_sizes, optim_name, Tang_train_loader, Tang_va
 def main():
     Tang_train_loader, Tang_val_loader, Tang_test_loader = create_Tang_MLP_loaders('data/pkl/moves/Tang_moves.pkl')
 
-    # Define grid search parameters
     aff_layers_options = [1, 2, 3, 4, 5]
     hidden_sizes = [128, 64, 32, 16, 8]
     optimizers = ['adamw', 'sgd', 'nesterov']
@@ -59,12 +58,10 @@ def main():
     momentum = 0.99
     save_path = 'savedModels/MLPgridSearch'
 
-    # Create a manager to store results
     manager = Manager()
     results = manager.list()
-
-    # Create and start processes for grid search
     processes = []
+
     for aff_layers in (aff_layers_options):
         for optim_name in optimizers:
             p = Process(target=train_model, args=(aff_layers, hidden_sizes, optim_name, Tang_train_loader, Tang_val_loader, num_epochs, learning_rate, momentum, save_path, results))
@@ -75,7 +72,6 @@ def main():
 
         p.join()
 
-    # Convert results to DataFrame and save
     results_df = pd.DataFrame(list(results))
     results_df.to_excel('data/xlsx/MLP_grid_search_results.xlsx', index=False)
 
