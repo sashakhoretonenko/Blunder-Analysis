@@ -2,6 +2,10 @@
 This file helps us determine which MLP model to use for our project. We test
 the flexible MLP with 1, 2, and 3 affine layers, as well as with the 3 different
 optimizers.
+
+For some reason, these trained very well but performed poorly on the test set.
+I think there must have been a code issue somewhere but I couldn't find it
+so I did some manual training and figured out that AdamW with 3 affine layers was optimal.
 '''
 
 import torch

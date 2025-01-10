@@ -13,7 +13,7 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
     class_total = [0] * 6
     all_labels = []
     all_predictions = []
-    all_probs = []  # For storing probability distributions
+    all_probs = []  # probability distributions
 
     classes = ['K', 'Q', 'R', 'B', 'N', 'P']
 
@@ -22,10 +22,10 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
             X, y = data[0].to(device), data[1].to(device)
 
             outputs = model(X)
-            probs = F.softmax(outputs, dim=1)  # Convert logits to probabilities
+            probs = F.softmax(outputs, dim=1)       # needed for prbabilities for brier score
             _, predicted = torch.max(outputs, 1)
 
-            # Collect all labels, predictions, and probabilities
+            # labels, predictions, and probabilities
             all_labels.extend(y.cpu().numpy())
             all_predictions.extend(predicted.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
@@ -37,7 +37,6 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
                 if predicted[i] == y[i]:
                     class_correct[label] += 1
 
-    # Initialize metrics
     correct_counts = []
     incorrect_counts = []
     accuracies = []
@@ -47,10 +46,10 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
     normalized_brier_scores = []
     cross_entropies = []
 
-    # Compute metrics per piece type
+    # Compute metricss for pieces
     for i in range(6):
         if class_total[i] > 0:
-            # Accuracy-based metrics
+            # Accuracy metrics
             accuracy = class_correct[i] / class_total[i]
             recall = recall_score(all_labels, all_predictions, labels=[i], average='macro')
             f1 = f1_score(all_labels, all_predictions, labels=[i], average='macro')
@@ -68,7 +67,7 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
                 reduction='mean'
             ).item()
 
-            # Storing results
+            # Store results
             correct_counts.append(class_correct[i])
             incorrect_counts.append(class_total[i] - class_correct[i])
             accuracies.append(accuracy)
@@ -98,7 +97,7 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
     print(f"\nTotal Accuracy: {total_accuracy:.4f}")
     print(f"Weighted Accuracy: {weighted_accuracy:.4f}")
 
-    # Save this as an Excel file
+    # Save as excel file
     df = pd.DataFrame({
         'Piece Type': classes,
         'Correct Predictions': correct_counts,
@@ -108,7 +107,7 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
 
     df.to_excel(f'{player}_per_piece_metrics.xlsx', index=False)
 
-    # Plot the results
+    # Plot results
     plt.figure(figsize=(12, 6))
     bar_width = 0.35
     index = range(len(classes))
@@ -135,7 +134,7 @@ def evaluate_per_piece_metrics(model, test_loader, player, device, train_name, t
         'Number of Samples': class_total
     })
 
-    # Save the summary to Excel
+    # Save sumary to excel
     df_summary.to_excel(f'{player}_overall_metrics.xlsx', index=False)
     print("\nOverall Metrics Summary:")
     print(df_summary)
